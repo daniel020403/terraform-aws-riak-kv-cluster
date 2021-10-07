@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+mkdir src && cd src
+sudo apt-get update && sudo apt-get install -y make m4 g++ nano perl-modules-5.28 libncurses-dev zlib1g-dev git libpam0g-dev stow libssl-dev
+
+export PATH=~/usr/bin:$PATH
+
+wget https://www.openssl.org/source/old/1.0.2/openssl-1.0.2u.tar.gz
+tar xzf openssl-1.0.2u.tar.gz
+(cd openssl-1.0.2u && ./config --prefix=/home/admin/usr shared && make -j && make install)
+
+wget http://ftp.gnu.org/gnu/autoconf/autoconf-2.59.tar.bz2
+tar xjf autoconf-2.59.tar.bz2
+(cd autoconf-2.59 && ./configure --prefix=/home/admin/usr && make && make install)
+
+wget https://github.com/basho/otp/archive/refs/tags/OTP_R16B02_basho10.tar.gz
+tar xzf OTP_R16B02_basho10.tar.gz
+(cd otp-OTP_R16B02_basho10/ && MAKE="make -j4" ./otp_build setup -a --disable-hipe --without-odbc --enable-silent-rules --with-ssl=/home/admin/usr --prefix=/usr/local/stow/otp-16 && sudo make install)
+
+(cd /usr/local/stow && sudo stow otp-16)
+git clone -b 2.1.3pre1 --depth 2 https://github.com/TI-Tokyo/riak_cs riak_cs-2.1.3pre1
+
+(cd riak_cs-2.1.3pre1 && make rel)
+
+wget https://github.com/erlang/otp/releases/download/OTP-22.3.4.21/otp_src_22.3.4.21.tar.gz
+tar xzf otp_src_22.3.4.21.tar.gz
+(cd otp_src_22.3.4.21 && ./configure --prefix=/usr/local/stow/otp-22 --disable-hipe --without-odbc --enable-silent-rules && make -j && sudo make install)
+(cd /usr/local/stow && sudo stow -D otp-16 && sudo stow otp-22)
+
+git clone -b 3.0.0pre8 --depth 2 https://github.com/TI-Tokyo/riak_cs riak_cs-3.0.0pre8
+(cd riak_cs-3.0.0pre8 && make rel)
