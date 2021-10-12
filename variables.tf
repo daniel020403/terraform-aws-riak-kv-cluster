@@ -15,10 +15,10 @@ variable "aws_region" {
     default     = "us-east-2"
 }
 
-variable "riak_node_count" {
-    description = "The number Riak nodes for the KV cluster."
-    type        = number
-    default     = 1
+variable "riak_kv_node_names" {
+    description = "The list of names of the Riak nodes for the KV cluster."
+    type        = list(string)
+    default     = ["ria01", "riak02", "riak03"]
 }
 
 variable "ami_id" {

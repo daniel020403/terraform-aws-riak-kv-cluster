@@ -12,7 +12,6 @@ provider "aws" {
     profile = var.aws_cli_profile
 }
 
-
 locals {
     node_name_prefix = "riak-${var.prefix}"
 
