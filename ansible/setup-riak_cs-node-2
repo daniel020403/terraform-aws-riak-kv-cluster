@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+
+RIAK_HOST=$1
+STANCHION_HOST=$2
+
+cd
+
+ip=$(hostname | sed -nEe 's/ip-(.+)-(.+)-(.+)-(.+)/\1.\2.\3.\4/p')
+
+function touch_conf() {
+    v=$1
+    rel=~/src/riak_cs-$v/rel/riak-cs
+    etc=$rel/etc
+    sed -Ei \
+        -e "s|nodename = .+|nodename = riak@$ip|" \
+        -e "s|listener = .+|listener = 0.0.0.0:8098|" \
+        -e "s|riak_host = .+|riak_host = $RIAK_HOST:8087|" \
+        -e "s|stanchion_host = .+|stanchion_host = $STANCHION_HOST:8085|" \
+        $etc/riak-cs.conf
+}
+
+for v in 2.1.3pre1 3.0.0pre8; do
+    touch_conf $v
+done

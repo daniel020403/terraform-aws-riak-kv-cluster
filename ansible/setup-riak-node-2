@@ -1,0 +1,64 @@
+#!/bin/bash
+
+set -e
+
+cd
+
+sudo mkfs.ext4 /dev/nvme0n1
+mkdir ext
+sudo mount -text4 /dev/nvme0n1 ext
+
+ip=$(hostname | sed -nEe 's/ip-(.+)-(.+)-(.+)-(.+)/\1.\2.\3.\4/p')
+
+function prepare_data_dirs() {
+    v=$1
+    rel=~/src/riak-$v/rel/riak
+    d0=$rel/data
+    d1=ext/riak-$v/data
+    sudo mkdir -p $d1
+    sudo chown admin:admin $d1
+    mv -a $d0/* $d1
+    rm -rf $d0
+    (cd $rel && ln -s /home/admin/$d1 .)
+}
+
+function touch_riak_conf() {
+    v=$1
+    rel=~/src/riak-$v/rel/riak
+    etc=$rel/etc
+    sed -Ei \
+        -e "s|storage_backend = bitcask|storage_backend = multi|" \
+        -e "s|nodename = .+|nodename = riak@$ip|" \
+        -e "s|listener\.http\.internal = .+|listener.http.internal = 0.0.0.0:8098|" \
+        -e "s|listener\.protobuf\.internal = .+|listener.protobuf.internal = 0.0.0.0:8087|" \
+        -e "s|mdc\.cluster_manager = .+|mdc.cluster_manager = 0.0.0.0:9080|" \
+        $etc/riak.conf
+    echo "
+buckets.default.allow_mult = true
+buckets.default.merge_strategy = 2" \
+         >>$etc/riak.conf
+    sed -i \
+    -e "s|]\\.|,\
+    {riak_kv, [\
+      {multi_backend,\
+          [{be_default,riak_kv_eleveldb_backend,\
+               [{max_open_files,20}]},\
+           {be_blocks,riak_kv_bitcask_backend,\
+               []}]},\
+      {multi_backend_default,be_default},\
+      {multi_backend_prefix_list,[{<<\"0b:\">>,be_blocks}]},\
+      {storage_backend,riak_kv_multi_backend}\
+     ]}\
+     ].|" \
+         $etc/advanced.config
+}
+
+for v in 2.2.6 2.9.8 3.0.7; do
+    prepare_data_dirs $v
+    touch_riak_conf $v
+done
+
+sudo echo "
+admin soft nofile 65536
+admin hard nofile 65536
+" >>/etc/security/limits.conf
